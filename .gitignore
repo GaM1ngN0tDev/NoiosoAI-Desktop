@@ -1,21 +1,66 @@
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/resources/
-!**/src/test/**/resources/
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# IntelliJ IDEA
-.idea
-*.iws
+# IntelliJ related
 *.iml
 *.ipr
-out/
+*.iws
+.idea/
 
-# VS Code
+# VS Code config
 .vscode/
 
-# Local configuration
-local.properties
-.DS_Store
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
 
-node_modules/
+# Symbolication / Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Android Studio artifacts
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ==========================================
+# EXTRA CRITICAL ADDITIONS FOR WINDOWS & SAFETY
+# ==========================================
+
+# 1. Windows Desktop Build Ephemeral Cache
+**/windows/flutter/ephemeral/
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+
+# 2. Local Configuration & Environment Files
+.env
+.env.*
+*secret*
+*.keystore
+*.jks
+local.properties
+
+# ==========================================
+# FORCE IGNORE THE MASSIVE NESTED FLUTTER SDK
+# ==========================================
+flutter/
+**/flutter/
