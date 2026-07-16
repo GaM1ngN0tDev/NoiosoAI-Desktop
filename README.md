@@ -20,6 +20,10 @@ The project utilizes a hybrid structure supporting cross-platform application ex
 * `lib/` - Flutter/Dart source components.
 * `windows/` - Native Windows build files and configurations.
 
+## 📼 Demo Showoff
+
+Showoff UI: https://youtu.be/DAqoiH5O6oM
+
 ## 🛠️ Prerequisites
 
 Before running or building the project, ensure you have the following installed:
