@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "NoiosoAI-Desktop (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "NoiosoAI-Desktop (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

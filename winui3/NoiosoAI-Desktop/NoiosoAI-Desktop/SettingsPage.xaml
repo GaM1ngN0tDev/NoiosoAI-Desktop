@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NoiosoAI_Desktop.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel Padding="40" Spacing="16" MaxWidth="600" HorizontalAlignment="Left">
+        <TextBlock Text="Server settings" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <TextBox x:Name="IpBox" Header="Server IP address" />
+        <TextBox x:Name="PortBox" Header="Server port" />
+
+        <Button Content="Save &amp; Connect" Style="{StaticResource AccentButtonStyle}"
+                Click="Save_Click" />
+
+        <InfoBar x:Name="SavedBar" Severity="Success" IsOpen="False"
+                 Message="Saved. Go back to Chat to reconnect." />
+    </StackPanel>
+</Page>
