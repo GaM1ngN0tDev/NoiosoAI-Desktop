@@ -6,7 +6,7 @@
 ---
 
 ## 🚀 Features
-placeholder
+A Newer Experimental Version Of NoiosoAI-Desktop But With WinUI 3
 
 
 ## 📁 Project Structure
