@@ -6,6 +6,12 @@ A sleek, lightweight desktop AI companion built with cross-platform frameworks a
 
 ---
 
+## New Beta For NoiosoAI-Desktop But With WinUI3
+
+[WinUI3-Branch-Testing](https://github.com/GaM1ngN0tDev/NoiosoAI-Desktop/tree/winui3-experiment)
+
+---
+
 ## 🚀 Features
 
 * **Local AI Processing:** Integrated with `OllamaService` for offline, private AI interactions.
