@@ -8,20 +8,28 @@
 
     <Page.Resources>
         <DataTemplate x:Key="UserTemplate" x:DataType="local:ChatMessage">
-            <Border HorizontalAlignment="Right" MaxWidth="600" Padding="16,12" Margin="0,0,0,12"
+            <Border Loaded="Bubble_Loaded"
+                    HorizontalAlignment="Right" MaxWidth="600" Padding="16,12" Margin="0,0,0,12"
                     CornerRadius="16,16,4,16"
                     Background="{ThemeResource AccentFillColorDefaultBrush}">
                 <TextBlock Text="{x:Bind Content, Mode=OneWay}" TextWrapping="Wrap"
+                           IsTextSelectionEnabled="True"
                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
             </Border>
         </DataTemplate>
 
         <DataTemplate x:Key="AssistantTemplate" x:DataType="local:ChatMessage">
-            <Border HorizontalAlignment="Left" MaxWidth="700" Padding="16,12" Margin="0,0,0,12"
+            <Border Loaded="Bubble_Loaded"
+                    HorizontalAlignment="Left" MaxWidth="700" Padding="16,12" Margin="0,0,0,12"
                     CornerRadius="16,16,16,4"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                <local:MarkdownView Markdown="{x:Bind Content, Mode=OneWay}" />
+                <Grid>
+                    <ProgressRing Width="18" Height="18" IsActive="True" HorizontalAlignment="Left"
+                                  Visibility="{x:Bind IsPending, Mode=OneWay}" />
+                    <local:MarkdownView Markdown="{x:Bind Content, Mode=OneWay}"
+                                        Visibility="{x:Bind HasContent, Mode=OneWay}" />
+                </Grid>
             </Border>
         </DataTemplate>
 
@@ -46,7 +54,8 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" Text="Chat" VerticalAlignment="Center"
+            <TextBlock x:Name="TitleText" Grid.Column="0" Text="New chat" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
                        Style="{StaticResource TitleTextBlockStyle}" />
 
             <ComboBox x:Name="ModelBox" Grid.Column="1" Width="200" PlaceholderText="Select model"
@@ -55,7 +64,7 @@
             <ComboBox x:Name="PersonalityBox" Grid.Column="2" Width="140"
                       SelectionChanged="PersonalityBox_SelectionChanged" />
 
-            <Button Grid.Column="3" Click="Clear_Click" ToolTipService.ToolTip="Clear chat">
+            <Button Grid.Column="3" Click="Clear_Click" ToolTipService.ToolTip="Clear this chat">
                 <SymbolIcon Symbol="Delete" />
             </Button>
         </Grid>
@@ -78,24 +87,28 @@
             </ListView>
 
             <InfoBar x:Name="Status" Severity="Warning" IsOpen="False" VerticalAlignment="Top" />
+            <ProgressBar x:Name="BusyBar" IsIndeterminate="True" Visibility="Collapsed" VerticalAlignment="Bottom" />
         </Grid>
 
-        <!-- Input -->
+        <!-- Input: Enter sends, Shift+Enter adds a new line -->
         <Grid Grid.Row="2" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBox x:Name="InputBox" Grid.Column="0" PlaceholderText="Ask NoiosoAI..."
-                     KeyDown="InputBox_KeyDown" />
+            <TextBox x:Name="InputBox" Grid.Column="0" PlaceholderText="Ask NoiosoAI...  (Shift+Enter for a new line)"
+                     AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="160"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" />
 
-            <Button x:Name="SendButton" Grid.Column="1" Style="{StaticResource AccentButtonStyle}"
+            <Button x:Name="SendButton" Grid.Column="1" VerticalAlignment="Bottom"
+                    Style="{StaticResource AccentButtonStyle}"
                     Click="Send_Click" ToolTipService.ToolTip="Send">
                 <SymbolIcon Symbol="Send" />
             </Button>
 
-            <Button x:Name="StopButton" Grid.Column="1" Visibility="Collapsed"
+            <Button x:Name="StopButton" Grid.Column="1" VerticalAlignment="Bottom" Visibility="Collapsed"
                     Click="Stop_Click" ToolTipService.ToolTip="Stop">
                 <SymbolIcon Symbol="Stop" />
             </Button>

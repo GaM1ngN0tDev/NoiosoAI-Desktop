@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.UI.Text;
@@ -14,6 +15,9 @@ namespace NoiosoAI_Desktop
     // Small built-in Markdown renderer (no NuGet needed).
     // Supports: ``` code blocks (with Copy button), `inline code`, **bold**,
     // # headings and - bullet lists.
+    //
+    // Rendering is incremental: unchanged blocks keep their controls, so
+    // streaming text doesn't make the whole bubble flash.
     public sealed class MarkdownView : UserControl
     {
         public static readonly DependencyProperty MarkdownProperty =
@@ -26,7 +30,10 @@ namespace NoiosoAI_Desktop
             set => SetValue(MarkdownProperty, value);
         }
 
+        private sealed record Block(string Kind, string Text);
+
         private readonly StackPanel _root = new() { Spacing = 6 };
+        private List<Block> _blocks = new();
 
         private static readonly FontFamily MonoFont = new("Cascadia Mono, Consolas");
         private static readonly Brush InlineCodeBrush = new SolidColorBrush(Color.FromArgb(255, 160, 130, 225));
@@ -42,9 +49,35 @@ namespace NoiosoAI_Desktop
 
         private void Render()
         {
-            _root.Children.Clear();
-            var text = Markdown ?? "";
-            if (text.Length == 0) return;
+            var newBlocks = Parse(Markdown ?? "");
+
+            for (var i = 0; i < newBlocks.Count; i++)
+            {
+                var nb = newBlocks[i];
+
+                if (i < _blocks.Count)
+                {
+                    var ob = _blocks[i];
+                    if (ob == nb) continue;                                   // unchanged: keep the control
+                    if (ob.Kind == nb.Kind && TryUpdate(_root.Children[i], nb)) continue;
+                    _root.Children[i] = Build(nb);                            // different kind: replace
+                }
+                else
+                {
+                    _root.Children.Add(Build(nb));
+                }
+            }
+
+            while (_root.Children.Count > newBlocks.Count)
+                _root.Children.RemoveAt(_root.Children.Count - 1);
+
+            _blocks = newBlocks;
+        }
+
+        private static List<Block> Parse(string text)
+        {
+            var blocks = new List<Block>();
+            if (text.Length == 0) return blocks;
 
             var lines = text.Replace("\r\n", "\n").Split('\n');
             var code = new StringBuilder();
@@ -56,7 +89,7 @@ namespace NoiosoAI_Desktop
                 {
                     if (inCode)
                     {
-                        AddCodeBlock(code.ToString().TrimEnd('\n'));
+                        blocks.Add(new Block("code", code.ToString().TrimEnd('\n')));
                         code.Clear();
                         inCode = false;
                     }
@@ -74,36 +107,73 @@ namespace NoiosoAI_Desktop
                 }
 
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                AddTextLine(line);
+
+                var trimmed = line.TrimStart();
+                var level = trimmed.TakeWhile(c => c == '#').Count();
+
+                if (level is > 0 and <= 6 && trimmed.Length > level && trimmed[level] == ' ')
+                    blocks.Add(new Block(level == 1 ? "h1" : level == 2 ? "h2" : "h3", trimmed.Substring(level).Trim()));
+                else if (trimmed.StartsWith("- ") || trimmed.StartsWith("* "))
+                    blocks.Add(new Block("bullet", "•  " + trimmed.Substring(2)));
+                else
+                    blocks.Add(new Block("p", line));
             }
 
             // Still streaming and the code block isn't closed yet: show what we have.
-            if (inCode) AddCodeBlock(code.ToString().TrimEnd('\n'));
+            if (inCode) blocks.Add(new Block("code", code.ToString().TrimEnd('\n')));
+
+            return blocks;
         }
 
-        private void AddTextLine(string line)
+        // Update an existing control in place. Returns false if it can't be reused.
+        private static bool TryUpdate(UIElement element, Block block)
         {
-            var trimmed = line.TrimStart();
+            if (block.Kind == "code")
+            {
+                if (element is Border { Tag: TextBlock codeText })
+                {
+                    codeText.Text = block.Text;
+                    return true;
+                }
+                return false;
+            }
+
+            if (element is TextBlock tb)
+            {
+                tb.Inlines.Clear();
+                AddInlines(tb, block.Text);
+                return true;
+            }
+            return false;
+        }
+
+        private static UIElement Build(Block block)
+        {
+            if (block.Kind == "code") return BuildCodeBlock(block.Text);
+
             var tb = new TextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
 
-            var level = trimmed.TakeWhile(c => c == '#').Count();
-            if (level is > 0 and <= 6 && trimmed.Length > level && trimmed[level] == ' ')
+            switch (block.Kind)
             {
-                tb.FontSize = level == 1 ? 22 : level == 2 ? 19 : 16;
-                tb.FontWeight = FontWeights.SemiBold;
-                AddInlines(tb, trimmed.Substring(level).Trim());
-            }
-            else if (trimmed.StartsWith("- ") || trimmed.StartsWith("* "))
-            {
-                tb.Margin = new Thickness(8, 0, 0, 0);
-                AddInlines(tb, "•  " + trimmed.Substring(2));
-            }
-            else
-            {
-                AddInlines(tb, line);
+                case "h1":
+                    tb.FontSize = 22;
+                    tb.FontWeight = FontWeights.SemiBold;
+                    break;
+                case "h2":
+                    tb.FontSize = 19;
+                    tb.FontWeight = FontWeights.SemiBold;
+                    break;
+                case "h3":
+                    tb.FontSize = 16;
+                    tb.FontWeight = FontWeights.SemiBold;
+                    break;
+                case "bullet":
+                    tb.Margin = new Thickness(8, 0, 0, 0);
+                    break;
             }
 
-            _root.Children.Add(tb);
+            AddInlines(tb, block.Text);
+            return tb;
         }
 
         private static void AddInlines(TextBlock tb, string text)
@@ -147,7 +217,7 @@ namespace NoiosoAI_Desktop
             Flush();
         }
 
-        private void AddCodeBlock(string code)
+        private static UIElement BuildCodeBlock(string code)
         {
             var codeText = new TextBlock
             {
@@ -176,7 +246,7 @@ namespace NoiosoAI_Desktop
             copy.Click += (_, _) =>
             {
                 var package = new DataPackage();
-                package.SetText(code);
+                package.SetText(codeText.Text);   // read at click time so it matches what is shown
                 Clipboard.SetContent(package);
             };
 
@@ -188,13 +258,14 @@ namespace NoiosoAI_Desktop
             grid.Children.Add(copy);
             grid.Children.Add(scroll);
 
-            _root.Children.Add(new Border
+            return new Border
             {
                 Child = grid,
+                Tag = codeText,   // lets Render() update the text in place
                 Background = CodeBackground,
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(10, 6, 10, 10)
-            });
+            };
         }
     }
 }

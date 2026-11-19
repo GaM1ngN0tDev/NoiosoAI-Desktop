@@ -3,7 +3,8 @@
     x:Class="NoiosoAI_Desktop.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:NoiosoAI_Desktop">
+    xmlns:local="using:NoiosoAI_Desktop"
+    xmlns:ui="using:Windows.UI">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -11,13 +12,13 @@
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Purple accent (replaces the default Windows blue) -->
-            <Color x:Key="SystemAccentColor">#7F67BE</Color>
-            <Color x:Key="SystemAccentColorLight1">#9A86CF</Color>
-            <Color x:Key="SystemAccentColorLight2">#B3A3DD</Color>
-            <Color x:Key="SystemAccentColorLight3">#CDC2EA</Color>
-            <Color x:Key="SystemAccentColorDark1">#6A52A8</Color>
-            <Color x:Key="SystemAccentColorDark2">#553F8C</Color>
-            <Color x:Key="SystemAccentColorDark3">#402F70</Color>
+            <ui:Color x:Key="SystemAccentColor">#7F67BE</ui:Color>
+            <ui:Color x:Key="SystemAccentColorLight1">#9A86CF</ui:Color>
+            <ui:Color x:Key="SystemAccentColorLight2">#B3A3DD</ui:Color>
+            <ui:Color x:Key="SystemAccentColorLight3">#CDC2EA</ui:Color>
+            <ui:Color x:Key="SystemAccentColorDark1">#6A52A8</ui:Color>
+            <ui:Color x:Key="SystemAccentColorDark2">#553F8C</ui:Color>
+            <ui:Color x:Key="SystemAccentColorDark3">#402F70</ui:Color>
 
             <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#7F67BE" />
             <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#7F67BE" Opacity="0.9" />

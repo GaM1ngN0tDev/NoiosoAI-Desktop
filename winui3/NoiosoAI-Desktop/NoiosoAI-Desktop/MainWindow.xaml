@@ -6,7 +6,7 @@
     Title="NoiosoAI">
 
     <Window.SystemBackdrop>
-        <MicaBackdrop />
+        <MicaBackdrop Kind="BaseAlt" />
     </Window.SystemBackdrop>
 
     <Grid>
@@ -21,19 +21,20 @@
                        Style="{StaticResource CaptionTextBlockStyle}" />
         </Grid>
 
+        <!-- Menu items (New chat + conversations) are built in code: see RebuildMenu() -->
         <NavigationView x:Name="Nav" Grid.Row="1"
                         PaneDisplayMode="LeftCompact"
+                        IsPaneOpen="False"
                         IsBackButtonVisible="Collapsed"
                         IsTitleBarAutoPaddingEnabled="False"
                         SelectionChanged="Nav_SelectionChanged">
-            <NavigationView.MenuItems>
-                <NavigationViewItem Content="Chat" Tag="chat">
-                    <NavigationViewItem.Icon>
-                        <SymbolIcon Symbol="Message" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </NavigationView.MenuItems>
-            <Frame x:Name="ContentFrame" />
+            <Frame x:Name="ContentFrame">
+                <Frame.ContentTransitions>
+                    <TransitionCollection>
+                        <NavigationThemeTransition />
+                    </TransitionCollection>
+                </Frame.ContentTransitions>
+            </Frame>
         </NavigationView>
     </Grid>
 </Window>

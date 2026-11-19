@@ -20,15 +20,20 @@ namespace NoiosoAI_Desktop
     public class ChatMessage : INotifyPropertyChanged
     {
         private string _content;
+        private bool _isPending;
 
-        public ChatMessage(string role, string content)
+        public ChatMessage(string role, string content, bool isPending = false)
         {
             Role = role;
             _content = content;
+            _isPending = isPending;
         }
 
         public string Role { get; }
         public bool IsUser => Role == "user";
+
+        // True for messages created live, so they play the fade-in animation once.
+        public bool IsFresh { get; set; }
 
         public string Content
         {
@@ -37,20 +42,64 @@ namespace NoiosoAI_Desktop
             {
                 if (_content == value) return;
                 _content = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Content)));
+                Raise(nameof(Content));
             }
         }
+
+        // True while waiting for the first word of a reply (shows a spinner).
+        public bool IsPending
+        {
+            get => _isPending;
+            set
+            {
+                if (_isPending == value) return;
+                _isPending = value;
+                Raise(nameof(IsPending));
+                Raise(nameof(HasContent));
+            }
+        }
+
+        public bool HasContent => !_isPending;
+
+        private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
-    // Shape of chat.json on disk.
+    public class Conversation
+    {
+        public const string DefaultTitle = "New chat";
+
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+        public string Title { get; set; } = DefaultTitle;
+        public ObservableCollection<ChatMessage> Messages { get; } = new();
+    }
+
+    // ---- Shapes of the files on disk ----
     public class SavedMessage
     {
         public string Role { get; set; } = "";
         public string Content { get; set; } = "";
     }
 
+    public class SavedConversation
+    {
+        public string Id { get; set; } = "";
+        public string Title { get; set; } = Conversation.DefaultTitle;
+        public List<SavedMessage> Messages { get; set; } = new();
+    }
+
+    public class SavedState
+    {
+        public string? Model { get; set; }
+        public string Personality { get; set; } = "Default";
+        public string Theme { get; set; } = "System";
+        public string? CurrentId { get; set; }
+        public Dictionary<string, string> PromptOverrides { get; set; } = new();
+        public List<SavedConversation> Conversations { get; set; } = new();
+    }
+
+    // Old single-chat format (chat.json), only used to migrate.
     public class SavedChat
     {
         public string? Model { get; set; }
@@ -61,11 +110,16 @@ namespace NoiosoAI_Desktop
     // State that survives page navigation and app restarts.
     public static class AppState
     {
-        public static ObservableCollection<ChatMessage> Messages { get; } = new();
+        public static ObservableCollection<Conversation> Conversations { get; } = new();
+        public static Conversation Current { get; private set; } = new();
+
         public static string? SelectedModel { get; set; }
         public static string SelectedPersonality { get; set; } = "Default";
+        public static string Theme { get; set; } = "System";   // System | Light | Dark
 
-        public static readonly Dictionary<string, string> Personalities = new()
+        public static Dictionary<string, string> PromptOverrides { get; } = new();
+
+        public static readonly Dictionary<string, string> DefaultPrompts = new()
         {
             ["Default"] = "You are NoiosoAI, a helpful, polite, and precise AI assistant.",
             ["Engineer"] = "You are a Senior Software Engineer. Give highly technical, code-focused, concise, and optimized answers. Avoid unnecessary small talk.",
@@ -74,42 +128,171 @@ namespace NoiosoAI_Desktop
             ["Sarcastic"] = "You are NoiosoAI, but today you are extremely sarcastic, witty, and slightly lazy. Tease the user playfully while still providing the actual solution.",
         };
 
-        private static string FilePath =>
-            Path.Combine(ApplicationData.Current.LocalFolder.Path, "chat.json");
+        public static IEnumerable<string> PersonalityNames => DefaultPrompts.Keys;
+
+        public static event Action? CurrentChanged;
+        public static event Action? ConversationsChanged;
+
+        public static void NotifyConversationsChanged() => ConversationsChanged?.Invoke();
+
+        // ---- Prompts ----
+        public static string GetPrompt(string name)
+        {
+            if (PromptOverrides.TryGetValue(name, out var custom) && !string.IsNullOrWhiteSpace(custom))
+                return custom;
+            return DefaultPrompts.TryGetValue(name, out var def) ? def : "";
+        }
+
+        public static void SetPrompt(string name, string text)
+        {
+            if (!DefaultPrompts.ContainsKey(name)) return;
+            if (string.IsNullOrWhiteSpace(text) || text == DefaultPrompts[name])
+                PromptOverrides.Remove(name);
+            else
+                PromptOverrides[name] = text;
+            Save();
+        }
+
+        // ---- Conversations ----
+        public static Conversation NewConversation()
+        {
+            // Reuse the current chat if it is still empty.
+            if (Current.Messages.Count == 0 && Conversations.Contains(Current))
+                return Current;
+
+            var c = new Conversation();
+            Conversations.Insert(0, c);
+            Current = c;
+            ConversationsChanged?.Invoke();
+            CurrentChanged?.Invoke();
+            Save();
+            return c;
+        }
+
+        public static void SelectConversation(Conversation c)
+        {
+            if (Current == c) return;
+            Current = c;
+            CurrentChanged?.Invoke();
+            Save();
+        }
+
+        public static void DeleteConversation(Conversation c)
+        {
+            Conversations.Remove(c);
+            if (Current == c)
+            {
+                if (Conversations.Count == 0)
+                {
+                    var fresh = new Conversation();
+                    Conversations.Add(fresh);
+                    Current = fresh;
+                }
+                else
+                {
+                    Current = Conversations[0];
+                }
+                CurrentChanged?.Invoke();
+            }
+            ConversationsChanged?.Invoke();
+            Save();
+        }
+
+        public static void RenameConversation(Conversation c, string title)
+        {
+            title = title.Trim();
+            if (title.Length == 0) return;
+            c.Title = title;
+            ConversationsChanged?.Invoke();
+            Save();
+        }
+
+        // ---- Saving / loading ----
+        private static string StatePath => Path.Combine(ApplicationData.Current.LocalFolder.Path, "chats.json");
+        private static string LegacyPath => Path.Combine(ApplicationData.Current.LocalFolder.Path, "chat.json");
 
         public static void Load()
         {
             try
             {
-                if (!File.Exists(FilePath)) return;
-                var saved = JsonSerializer.Deserialize<SavedChat>(File.ReadAllText(FilePath));
-                if (saved == null) return;
-
-                SelectedModel = saved.Model;
-                if (Personalities.ContainsKey(saved.Personality))
-                    SelectedPersonality = saved.Personality;
-
-                Messages.Clear();
-                foreach (var m in saved.Messages)
-                    Messages.Add(new ChatMessage(m.Role, m.Content));
+                if (File.Exists(StatePath))
+                {
+                    var s = JsonSerializer.Deserialize<SavedState>(File.ReadAllText(StatePath));
+                    if (s != null) Apply(s);
+                }
+                else if (File.Exists(LegacyPath))
+                {
+                    var old = JsonSerializer.Deserialize<SavedChat>(File.ReadAllText(LegacyPath));
+                    if (old != null)
+                    {
+                        SelectedModel = old.Model;
+                        if (DefaultPrompts.ContainsKey(old.Personality)) SelectedPersonality = old.Personality;
+                        if (old.Messages.Count > 0)
+                        {
+                            var c = new Conversation { Title = "Previous chat" };
+                            foreach (var m in old.Messages) c.Messages.Add(new ChatMessage(m.Role, m.Content));
+                            Conversations.Add(c);
+                        }
+                    }
+                }
             }
             catch
             {
-                // Corrupt or missing file: start with an empty chat.
+                // Corrupt file: start fresh.
             }
+
+            if (Conversations.Count == 0) Conversations.Add(new Conversation());
+            if (!Conversations.Contains(Current)) Current = Conversations[0];
+        }
+
+        private static void Apply(SavedState s)
+        {
+            SelectedModel = s.Model;
+            if (DefaultPrompts.ContainsKey(s.Personality)) SelectedPersonality = s.Personality;
+            Theme = s.Theme is "Light" or "Dark" ? s.Theme : "System";
+
+            PromptOverrides.Clear();
+            foreach (var kv in s.PromptOverrides)
+                if (DefaultPrompts.ContainsKey(kv.Key)) PromptOverrides[kv.Key] = kv.Value;
+
+            Conversations.Clear();
+            foreach (var sc in s.Conversations)
+            {
+                var c = new Conversation
+                {
+                    Id = string.IsNullOrEmpty(sc.Id) ? Guid.NewGuid().ToString("N") : sc.Id,
+                    Title = string.IsNullOrWhiteSpace(sc.Title) ? Conversation.DefaultTitle : sc.Title
+                };
+                foreach (var m in sc.Messages) c.Messages.Add(new ChatMessage(m.Role, m.Content));
+                Conversations.Add(c);
+            }
+
+            var current = Conversations.FirstOrDefault(c => c.Id == s.CurrentId);
+            if (current != null) Current = current;
         }
 
         public static void Save()
         {
             try
             {
-                var saved = new SavedChat
+                var s = new SavedState
                 {
                     Model = SelectedModel,
                     Personality = SelectedPersonality,
-                    Messages = Messages.Select(m => new SavedMessage { Role = m.Role, Content = m.Content }).ToList()
+                    Theme = Theme,
+                    CurrentId = Current.Id,
+                    PromptOverrides = new Dictionary<string, string>(PromptOverrides),
+                    Conversations = Conversations.Select(c => new SavedConversation
+                    {
+                        Id = c.Id,
+                        Title = c.Title,
+                        Messages = c.Messages
+                            .Where(m => !m.IsPending)
+                            .Select(m => new SavedMessage { Role = m.Role, Content = m.Content })
+                            .ToList()
+                    }).ToList()
                 };
-                File.WriteAllText(FilePath, JsonSerializer.Serialize(saved));
+                File.WriteAllText(StatePath, JsonSerializer.Serialize(s));
             }
             catch
             {
