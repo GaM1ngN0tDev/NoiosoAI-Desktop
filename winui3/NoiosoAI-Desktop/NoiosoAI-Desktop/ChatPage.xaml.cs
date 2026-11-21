@@ -39,6 +39,22 @@ namespace NoiosoAI_Desktop
             AppState.ConversationsChanged += () => DispatcherQueue.TryEnqueue(UpdateTitle);
 
             AttachConversation();
+
+            // Soft fade-in whenever these controls become visible.
+            SetupFadeIn(BusyBar);
+            SetupFadeIn(StopButton);
+            SetupFadeIn(SendButton);
+        }
+
+        private static void SetupFadeIn(UIElement element)
+        {
+            var compositor = ElementCompositionPreview.GetElementVisual(element).Compositor;
+            var show = compositor.CreateScalarKeyFrameAnimation();
+            show.Target = "Opacity";
+            show.InsertKeyFrame(0f, 0f);
+            show.InsertKeyFrame(1f, 1f);
+            show.Duration = TimeSpan.FromMilliseconds(220);
+            ElementCompositionPreview.SetImplicitShowAnimation(element, show);
         }
 
         // Show the messages of whichever chat is currently selected.
@@ -218,7 +234,7 @@ namespace NoiosoAI_Desktop
             conv.Messages.Add(userMsg);
             history.Add(userMsg);
 
-            var reply = new ChatMessage("assistant", "", isPending: true) { IsFresh = true };
+            var reply = new ChatMessage("assistant", "", isPending: true) { IsStreaming = true };
             conv.Messages.Add(reply);
             ScrollTo(conv, reply);
 
@@ -266,6 +282,7 @@ namespace NoiosoAI_Desktop
             }
             finally
             {
+                reply.IsStreaming = false;
                 _cts?.Dispose();
                 _cts = null;
                 SetBusy(false);

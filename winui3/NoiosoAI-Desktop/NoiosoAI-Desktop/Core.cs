@@ -59,6 +59,19 @@ namespace NoiosoAI_Desktop
             }
         }
 
+        // True while the reply is still arriving (shows a cursor at the end of the text).
+        private bool _isStreaming;
+        public bool IsStreaming
+        {
+            get => _isStreaming;
+            set
+            {
+                if (_isStreaming == value) return;
+                _isStreaming = value;
+                Raise(nameof(IsStreaming));
+            }
+        }
+
         public bool HasContent => !_isPending;
 
         private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

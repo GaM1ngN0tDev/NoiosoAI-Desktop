@@ -19,15 +19,16 @@
         </DataTemplate>
 
         <DataTemplate x:Key="AssistantTemplate" x:DataType="local:ChatMessage">
-            <Border Loaded="Bubble_Loaded"
+            <Border
                     HorizontalAlignment="Left" MaxWidth="700" Padding="16,12" Margin="0,0,0,12"
                     CornerRadius="16,16,16,4"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                 <Grid>
-                    <ProgressRing Width="18" Height="18" IsActive="True" HorizontalAlignment="Left"
-                                  Visibility="{x:Bind IsPending, Mode=OneWay}" />
+                    <local:TypingDots HorizontalAlignment="Left"
+                                      Visibility="{x:Bind IsPending, Mode=OneWay}" />
                     <local:MarkdownView Markdown="{x:Bind Content, Mode=OneWay}"
+                                        ShowCursor="{x:Bind IsStreaming, Mode=OneWay}"
                                         Visibility="{x:Bind HasContent, Mode=OneWay}" />
                 </Grid>
             </Border>
@@ -78,6 +79,9 @@
             <ListView x:Name="MessagesList"
                       ItemTemplateSelector="{StaticResource MessageSelector}"
                       SelectionMode="None" IsItemClickEnabled="False">
+                <ListView.ItemContainerTransitions>
+                    <TransitionCollection />
+                </ListView.ItemContainerTransitions>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />

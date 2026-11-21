@@ -30,6 +30,17 @@ namespace NoiosoAI_Desktop
             set => SetValue(MarkdownProperty, value);
         }
 
+        public static readonly DependencyProperty ShowCursorProperty =
+            DependencyProperty.Register(nameof(ShowCursor), typeof(bool), typeof(MarkdownView),
+                new PropertyMetadata(false, OnMarkdownChanged));
+
+        // Shows a small cursor at the end of the text while a reply is streaming.
+        public bool ShowCursor
+        {
+            get => (bool)GetValue(ShowCursorProperty);
+            set => SetValue(ShowCursorProperty, value);
+        }
+
         private sealed record Block(string Kind, string Text);
 
         private readonly StackPanel _root = new() { Spacing = 6 };
@@ -49,7 +60,7 @@ namespace NoiosoAI_Desktop
 
         private void Render()
         {
-            var newBlocks = Parse(Markdown ?? "");
+            var newBlocks = Parse(Markdown ?? "", ShowCursor);
 
             for (var i = 0; i < newBlocks.Count; i++)
             {
@@ -74,7 +85,7 @@ namespace NoiosoAI_Desktop
             _blocks = newBlocks;
         }
 
-        private static List<Block> Parse(string text)
+        private static List<Block> Parse(string text, bool cursor)
         {
             var blocks = new List<Block>();
             if (text.Length == 0) return blocks;
@@ -121,6 +132,12 @@ namespace NoiosoAI_Desktop
 
             // Still streaming and the code block isn't closed yet: show what we have.
             if (inCode) blocks.Add(new Block("code", code.ToString().TrimEnd('\n')));
+
+            if (cursor && blocks.Count > 0)
+            {
+                var last = blocks[^1];
+                if (last.Kind != "code") blocks[^1] = last with { Text = last.Text + " ▍" };
+            }
 
             return blocks;
         }
