@@ -11,15 +11,25 @@
 ## 🚀 Features
 An experimental version of NoiosoAI-Desktop built with WinUI 3 and C#. It is a desktop chat client for a local [Ollama](https://ollama.com) server.
 
-- Native Windows 11 look: Mica backdrop, sidebar navigation and a custom title bar
-- Streaming replies, shown word by word as they are generated
-- Stop button to cancel a reply mid-stream
+**Chat**
+- Streaming replies, shown as they are generated, with a Stop button to cancel mid-reply
+- Multiple chats: start a new chat, switch between them in the sidebar, rename or delete them with a right-click
+- Chats are named automatically from your first message
+- Multi-line input: Enter sends, Shift+Enter adds a new line
+- Markdown rendering: code blocks with a Copy button, inline code, bold text, headings and lists
 - Model picker, filled automatically from your Ollama server
 - Personality presets: Default, Engineer, Friendly, Wise and Sarcastic
-- Markdown rendering: code blocks with a Copy button, inline code, bold text, headings and lists
-- Chat history saved between launches
-- Server settings page for the Ollama IP address and port
+- Everything is saved between launches
+
+**Settings**
+- Theme: use the system setting, light or dark
+- Editable system prompt for each personality, with a reset-to-default button
+- Ollama server IP address and port
+
+**Look and feel**
+- Native Windows 11 style: Mica Alt backdrop, collapsible sidebar and a custom title bar
 - Purple accent color
+- Animations: sliding page transitions, fade-in message bubbles, animated typing dots while the model is thinking, a cursor while text streams in
 
 ## 📁 Project Structure
 ```
@@ -30,11 +40,12 @@ NoiosoAI-Desktop/
         ├── NoiosoAI-Desktop.slnx
         └── NoiosoAI-Desktop/
             ├── App.xaml(.cs)           # app entry point and purple accent theme
-            ├── MainWindow.xaml(.cs)    # window, title bar and sidebar navigation
+            ├── MainWindow.xaml(.cs)    # window, title bar, sidebar and chat list
             ├── ChatPage.xaml(.cs)      # chat UI, pickers, streaming and stop
-            ├── SettingsPage.xaml(.cs)  # Ollama server IP and port
+            ├── SettingsPage.xaml(.cs)  # theme, server and system prompts
             ├── MarkdownView.cs         # built-in Markdown renderer
-            ├── Core.cs                 # chat messages, saved state and Ollama client
+            ├── TypingDots.cs           # animated "thinking" indicator
+            ├── Core.cs                 # chats, saved state and Ollama client
             ├── Assets/                 # app icons
             ├── Package.appxmanifest
             └── NoiosoAI-Desktop.csproj
@@ -42,8 +53,7 @@ NoiosoAI-Desktop/
 
 ## 🛠️ Prerequisites
 - Windows 11 (recent build)
-- Visual Studio 2022 or newer with the **WinUI application development** workload
-- .NET SDK (the version that comes with Visual Studio)
+- A recent Visual Studio with the **WinUI application development** workload (the project uses the newer `.slnx` solution format)
 - Windows **Developer Mode** turned on (Settings → System → For developers)
 - [Ollama](https://ollama.com) running with at least one model pulled, for example `ollama pull llama3`
 
@@ -59,8 +69,4 @@ NoiosoAI-Desktop/
 4. If Ollama is not on the same PC, open **Settings** in the app and enter its IP address and port (the default is `localhost:11434`).
 
 ## 💾 Where Data Is Stored
-Chat history and server settings are stored locally in the app's own data folder on your PC. Nothing is sent anywhere except to the Ollama server you configure.
-
-
-
-
+Your chats, theme and custom prompts are saved in a local file in the app's own data folder on your PC. Server settings are stored in the Windows app settings. Chats are saved as plain, unencrypted text. Nothing is sent anywhere except to the Ollama server you configure.
